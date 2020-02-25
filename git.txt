@@ -1,0 +1,124 @@
+Настройка Gitlab
+########################################
+"/etc/docker/daemon.json
+{
+    "insecure-registries": ["10.242.144.4:4567"]
+}
+#########################################
+/etc/systemd/system/docker.service.d/http-proxy.conf
+[Service]
+Environment="HTTP_PROXY=http://10.230.143.15:3128/"
+Environment="NO_PROXY=localhost,127.0.0.1,10.242.144.4"
+#########################################
+В веб-морде:
+Admin area->Overview->Runners
+gitlab-runner registry
+Please enter the gitlab-ci coordinator URL (e.g. https://gitlab.com/):
+http://10.242.144.4/
+Please enter the gitlab-ci token for this runner:
+FyMR7FxzmodxqLqPEWSq
+Please enter the gitlab-ci description for this runner:
+[btc-vsrv-dock4.megacom.local]: shell-ansible
+Please enter the gitlab-ci tags for this runner (comma separated):
+shell-ansible
+Registering runner... succeeded                     runner=FyMR7Fxz
+Please enter the executor: docker, shell, virtualbox, docker+machine, kubernetes, docker-ssh, parallels, ssh, docker-ssh+machine:
+shell
+##########################################
+
+###################Dockerfile###########################
+FROM centos/systemd
+
+RUN yum -y install epel-release; yum -y install openssh-server; yum -y install ansible; yum -y install git; yum -y install coreutils; yum -y install shadow-utils; yum -y install nginx; yum clean all; systemctl enable sshd.service; echo "root:password" | chpasswd
+EXPOSE 2222:22
+
+CMD ["/usr/sbin/init"]
+###########################################################
+#########{
+  "id": "nginx-test1",
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "10.242.144.4:4567/root/project_ansible:centos7-test",
+      "network": "BRIDGE",
+      "portMappings": [
+        { "hostPort": 0, "containerPort": 897, "servicePort": 10002 }
+      ]
+    }
+  },
+"fetch": [
+        {
+            "uri": "file:///etc/docker.tar.gz",
+            "extract": true
+        }
+    ],
+"instances": 1,
+    "cpus": 1,
+    "mem": 1024,
+    "minimumHealthCapacity": 0.5,
+    "maximumOverCapacity": 0.2,
+    "name": "nginx",
+    "role": "*",
+    "bridge": true,
+    "https-redirect": false
+}
+###############nginx.json########################
+################
+"fetch": [
+  {
+    "uri": "file:///etc/docker.tar.gz"
+  }
+]
+данный раздел должен находиться на сервере, который будет выкачивать из нашего gitlab-репозитория
+docker login 10.242.144.4:4567 - логинимся
+$ cd ~
+$ tar -czf docker.tar.gz .docker - архивируем
+$ tar -tvf ~/docker.tar.gz
+
+  drwx------ root/root         0 2015-07-28 02:54 .docker/
+  -rw------- root/root       114 2015-07-28 01:31 .docker/config.json
+$ cp docker.tar.gz /etc/ 
+
+#############################################################
+[root@btc-vsrv-dock4 ~]# id gitlab-runner
+uid=992(gitlab-runner) gid=988(gitlab-runner) groups=988(gitlab-runner),10(wheel),994(docker)
+#############################################################
+Настройка для gitlab-runner 
+ # Linux x86-64
+ sudo wget -O /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
+ sudo chmod +x /usr/local/bin/gitlab-runner
+ curl -sSL https://get.docker.com/ | sh
+ sudo useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
+ sudo gitlab-runner install --user=gitlab-runner --working-directory=/home/gitlab-runner
+ sudo gitlab-runner start
+ 
+ 
+ ############### Команды для работы ##################
+git add .
+git commit -m "Its work"
+git push -u origin master
+gitlab-ctl reconfigure && gitlab-ctl restart
+gitlab-ctl status
+####################################################
+##########/etc/gitlab/gitlab.rb####################
+external_url 'http://10.242.144.4'
+registry_external_url 'http://10.242.144.4:4567'
+registry['enable'] = true
+letsencrypt['enable'] = false
+##################################################
+
+git checkout -b tata ###создает ветку tata и сраз уже переходит под нее
+или
+git branch tata ### создаем ветку tata
+git checkout tata ### переходи под ветку tata
+При необходимости переключаемся под другую ветку
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++выдаем права на каталог+++++++++++++++++++++++++++++++++
+setfacl -R -m user:deploy:rwx magento2/
+Параметры -m ( --modify ) и -M ( -modify-file ) изменяют ACL файла или каталога. 
+Записи ACL для этой операции должны включать разрешения.
+setfacl -d -m user:razrab:rx httpd  # ставим параметры по умолчанию для каталога, чтобы новосозданне файлы имели теже доступы
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
